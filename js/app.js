@@ -1,11 +1,36 @@
           const API_URL = 'http://localhost:5000/api';
         let temporizadorActivo = null;
+        const IVA = 0.16;
+        let peliculas = [];          // Lista de películas cargadas, para buscarlas con find()
+        let precioSeleccionado = 0;  // Precio de la película de la función elegida
+
+        // Arrow functions (appArrow.js)
+        const calcularDisponibles = (h) => (h.capacidad_maxima || 50) - (h.boletos_vendidos || 0);
+
+        // Igual que en app.js: el precio ya incluye IVA, así que calculamos cuánto IVA se cobró
+        const desglosarIVA = (total) => {
+            const subtotal = total / (1 + IVA);
+            const ivaTotal = total - subtotal;
+            return { subtotal, ivaTotal, total };
+        };
+
+        // Promesa (appPrometida.js): se resuelve si la cantidad es válida y se rechaza si no
+        const validarCantidad = (cantidad, disponibles) => new Promise((resolve, reject) => {
+            if (cantidad > 0 && cantidad <= disponibles) {
+                resolve(cantidad);
+            } else {
+                reject(`Solo puedes reservar entre 1 y ${disponibles} boletos.`);
+            }
+        });
+
+        // Promesa que se resuelve después de "ms" milisegundos (setTimeout dentro de una Promesa)
+        const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
         // --- 1. CARGAR CARTELERA ---
-        async function cargarCartelera() {
+        const cargarCartelera = async () => {
             try {
                 const res = await fetch(`${API_URL}/eventos`);
-                const peliculas = await res.json();
+                peliculas = await res.json();
                 const grid = document.getElementById('gridPeliculas');
                 grid.innerHTML = '';
 
@@ -16,18 +41,28 @@
 
                 for (let pelicula of peliculas) {
                     let badgesHorarios = '';
+                    let resumenFunciones = '';
                     try {
                         const resHorarios = await fetch(`${API_URL}/horarios/${pelicula.id}`);
                         const horarios = await resHorarios.json();
 
                         if (horarios && horarios.length > 0) {
-                            horarios.forEach(h => {
-                                const disponibles = (h.capacidad_maxima || 50) - (h.boletos_vendidos || 0);
+                            // filter: funciones con lugares / reduce: suma de asientos libres / some: ¿queda alguna?
+                            const conLugares = horarios.filter(h => calcularDisponibles(h) > 0);
+                            const asientosLibres = conLugares.reduce((acumulador, h) => acumulador + calcularDisponibles(h), 0);
+                            const hayLugares = horarios.some(h => calcularDisponibles(h) > 0);
+                            resumenFunciones = hayLugares
+                                ? ` (${conLugares.length} de ${horarios.length} con lugares, ${asientosLibres} asientos libres)`
+                                : ' (Agotada)';
+
+                            // map: convierte cada horario en su botón y join los une en un solo texto
+                            badgesHorarios = horarios.map(h => {
+                                const disponibles = calcularDisponibles(h);
                                 const estaAgotado = disponibles <= 0;
 
-                                badgesHorarios += `
-                                    <button class="funcion-card-btn mb-2" 
-                                            onclick="seleccionarHorario(${h.id}, '${pelicula.titulo.replace(/'/g, "\\'")}', '${h.fecha}', '${h.hora}', '${h.sala}', ${disponibles})"
+                                return `
+                                    <button class="funcion-card-btn mb-2"
+                                            onclick="seleccionarHorario(${h.id}, '${pelicula.titulo.replace(/'/g, "\\'")}', '${h.fecha}', '${h.hora}', '${h.sala}', ${disponibles}, ${pelicula.id})"
                                             ${estaAgotado ? 'disabled' : ''}>
                                         <div class="d-flex justify-content-between align-items-center mb-1">
                                             <span class="small text-muted"><i class="bi bi-calendar-event me-1"></i>${h.fecha}</span>
@@ -38,7 +73,7 @@
                                             <span class="badge bg-secondary text-light border border-secondary px-2 py-1"><i class="bi bi-door-open me-1"></i>${h.sala}</span>
                                         </div>
                                     </button>`;
-                            });
+                            }).join('');
                         } else {
                             badgesHorarios = '<span class="text-muted small">Sin horarios disponibles</span>';
                         }
@@ -56,7 +91,7 @@
                                         <span class="text-danger fw-bold fs-5">$${pelicula.precio} MXN</span>
                                     </div>
                                     <hr class="border-secondary">
-                                    <p class="text-uppercase text-white small fw-bold mb-2">Funciones y Salas:</p>
+                                    <p class="text-uppercase text-white small fw-bold mb-2">Funciones y Salas${resumenFunciones}:</p>
                                     <div class="d-flex flex-column">${badgesHorarios}</div>
                                 </div>
                             </div>
@@ -66,10 +101,10 @@
             } catch (e) {
                 console.error('Error al conectar con la API de eventos:', e);
             }
-        }
+        };
 
         // --- 2. TEMPORIZADOR Y RESERVAS ---
-        function iniciarTemporizadorRetencion() {
+        const iniciarTemporizadorRetencion = () => {
             let tiempo = 15; 
             const contenedor = document.getElementById('contenedorTemporizador');
             const spanContador = document.getElementById('contador');
@@ -94,13 +129,17 @@
                     if (modal) modal.hide();
                 }
             }, 1000);
-        }
+        };
 
-        function seleccionarHorario(horarioId, tituloPelicula, fecha, hora, sala, disponibles) {
+        const seleccionarHorario = (horarioId, tituloPelicula, fecha, hora, sala, disponibles, peliculaId) => {
             if (disponibles <= 0) {
                 alert('Lo sentimos, esta función está agotada.');
                 return;
             }
+
+            // find + destructuración (hola.js): tomamos el precio de la película elegida
+            const { precio } = peliculas.find(p => p.id === peliculaId);
+            precioSeleccionado = precio;
 
             document.getElementById('horarioSeleccionadoId').value = horarioId;
             document.getElementById('detallesPelículaTitulo').textContent = tituloPelicula;
@@ -117,15 +156,26 @@
             modalReserva.show();
 
             iniciarTemporizadorRetencion();
-        }
+        };
 
-        document.getElementById('formReservaBoleto').addEventListener('submit', async function(e) {
+        document.getElementById('formReservaBoleto').addEventListener('submit', async (e) => {
             e.preventDefault();
             const datos = {
                 horario_id: document.getElementById('horarioSeleccionadoId').value,
                 nombre_cliente: document.getElementById('nombreCliente').value,
                 cantidad_boletos: parseInt(document.getElementById('cantidadBoletos').value)
             };
+            const alerta = document.getElementById('alertaRespuesta');
+            const disponibles = parseInt(document.getElementById('detallesDisponibles').textContent);
+
+            // Promesa con then/catch: si la cantidad no es válida, mostramos el motivo y no enviamos nada
+            const cantidadValida = await validarCantidad(datos.cantidad_boletos, disponibles)
+                .then(() => true)
+                .catch((error) => {
+                    alerta.innerHTML = `<div class="alert alert-danger">${error}</div>`;
+                    return false;
+                });
+            if (!cantidadValida) return;
 
             try {
                 const res = await fetch(`${API_URL}/reservas`, {
@@ -134,44 +184,52 @@
                     body: JSON.stringify(datos)
                 });
                 const resultado = await res.json();
-                const alerta = document.getElementById('alertaRespuesta');
+                // Destructuración renombrando "error" a "mensajeError"
+                const { mensaje, error: mensajeError } = resultado;
 
                 if (res.ok) {
-                    alerta.innerHTML = `<div class="alert alert-success">${resultado.mensaje || '¡Boleto reservado con éxito!'}</div>`;
+                    const { subtotal, ivaTotal, total } = desglosarIVA(precioSeleccionado * datos.cantidad_boletos);
+                    alerta.innerHTML = `<div class="alert alert-success">${mensaje || '¡Boleto reservado con éxito!'}
+                        <hr class="my-2">
+                        Subtotal: $${subtotal.toFixed(2)}<br>
+                        IVA (16%): $${ivaTotal.toFixed(2)}<br>
+                        <strong>Total a pagar: $${total.toFixed(2)}</strong></div>`;
                     if (temporizadorActivo) clearInterval(temporizadorActivo);
-                    setTimeout(() => { location.reload(); }, 2000);
+                    esperar(2000).then(() => location.reload());
                 } else {
-                    alerta.innerHTML = `<div class="alert alert-danger">${resultado.error || 'Error al procesar'}</div>`;
+                    alerta.innerHTML = `<div class="alert alert-danger">${mensajeError || 'Error al procesar'}</div>`;
                 }
             } catch (e) { console.error(e); }
         });
 
         // --- 3. PANEL ADMIN CRUD CON EDICIÓN Y CREACIÓN DE HORARIOS ---
-        async function cargarAdminPeliculas() {
+        const cargarAdminPeliculas = async () => {
             try {
                 const res = await fetch(`${API_URL}/eventos`);
-                const peliculas = await res.json();
+                peliculas = await res.json();
                 const tbody = document.getElementById('tablaAdminBody');
                 tbody.innerHTML = '';
 
                 peliculas.forEach(p => {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${p.id}</td>
-                            <td class="fw-bold text-white">${p.titulo}</td>
-                            <td class="text-muted small">${p.descripcion || ''}</td>
-                            <td>$${p.precio}</td>
+                    const { id, titulo, descripcion, precio } = p;
+                    // createElement + appendChild en lugar de ir sumando texto con innerHTML +=
+                    const fila = document.createElement('tr');
+                    fila.innerHTML = `
+                            <td>${id}</td>
+                            <td class="fw-bold text-white">${titulo}</td>
+                            <td class="text-muted small">${descripcion || ''}</td>
+                            <td>$${precio}</td>
                             <td>
-                                <button class="btn btn-sm btn-outline-warning me-1" title="Editar Película y Horarios" onclick="abrirEditar(${p.id}, '${p.titulo.replace(/'/g, "\\'")}', '${(p.descripcion || '').replace(/'/g, "\\'")}', ${p.precio})"><i class="bi bi-pencil"></i></button>
-                                <button class="btn btn-sm btn-outline-danger" title="Eliminar Película" onclick="eliminarPelicula(${p.id})"><i class="bi bi-trash"></i></button>
+                                <button class="btn btn-sm btn-outline-warning me-1" title="Editar Película y Horarios" onclick="abrirEditar(${id})"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" title="Eliminar Película" onclick="eliminarPelicula(${id})"><i class="bi bi-trash"></i></button>
                             </td>
-                        </tr>
                     `;
+                    tbody.appendChild(fila);
                 });
             } catch (e) { console.error(e); }
-        }
+        };
 
-        function prepararCreacion() {
+        const prepararCreacion = () => {
             document.getElementById('modalCrudTitulo').textContent = 'Crear Nueva Película';
             document.getElementById('seccionHorariosTitulo').textContent = 'Función Inicial:';
             document.getElementById('btnAgregarHorarioExtra').style.display = 'none'; // Ocultar botón extra al crear
@@ -201,15 +259,18 @@
                     </div>
                 </div>
             `;
-        }
+        };
 
-        async function abrirEditar(id, titulo, descripcion, precio) {
+        const abrirEditar = async (id) => {
+            // find: buscamos la película por su id y sacamos sus datos con destructuración
+            const { titulo, descripcion, precio } = peliculas.find(p => p.id === id);
+
             document.getElementById('modalCrudTitulo').textContent = 'Editar Película y Horarios';
             document.getElementById('seccionHorariosTitulo').textContent = 'Funciones Existentes:';
             document.getElementById('btnAgregarHorarioExtra').style.display = 'inline-block'; // Mostrar botón para agregar más horarios
             document.getElementById('peliculaId').value = id;
             document.getElementById('inputTitulo').value = titulo;
-            document.getElementById('inputDescripcion').value = descripcion;
+            document.getElementById('inputDescripcion').value = descripcion || '';
             document.getElementById('inputPrecio').value = precio;
 
             const contenedorHorarios = document.getElementById('contenedorHorariosDinamicos');
@@ -257,10 +318,10 @@
 
             const modal = new bootstrap.Modal(document.getElementById('modalPelicula'));
             modal.show();
-        }
+        };
 
         // Función para agregar un bloque extra de horario vacío al editar
-        function agregarCampoHorarioExtra() {
+        const agregarCampoHorarioExtra = () => {
             const contenedorHorarios = document.getElementById('contenedorHorariosDinamicos');
             contenedorHorarios.innerHTML += `
                 <div class="p-3 mb-3 bg-success bg-opacity-10 border border-success rounded-3 horario-nuevo" data-horario-id="nuevo">
@@ -287,10 +348,10 @@
                     </div>
                 </div>
             `;
-        }
+        };
 
         // Envío unificado para Crear (POST) o Actualizar Película, modificar horarios existentes y crear nuevos
-        document.getElementById('formCrudPelicula').addEventListener('submit', async function(e) {
+        document.getElementById('formCrudPelicula').addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('peliculaId').value;
             
@@ -372,7 +433,7 @@
             }
         });
 
-        async function eliminarPelicula(id) {
+        const eliminarPelicula = async (id) => {
             if (confirm('¿Estás seguro de eliminar esta película y sus funciones?')) {
                 try {
                     const res = await fetch(`${API_URL}/eventos/${id}`, { method: 'DELETE' });
@@ -382,9 +443,9 @@
                     }
                 } catch (e) { console.error(e); }
             }
-        }
+        };
 
-      
+
         cargarCartelera();
         cargarAdminPeliculas();
  
