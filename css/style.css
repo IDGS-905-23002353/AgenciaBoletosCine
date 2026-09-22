@@ -1,0 +1,73 @@
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0b0f19;
+            color: #f8f9fa;
+        }
+        .navbar-brand {
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+        .card-pelicula {
+            background: #161b26;
+            border: 1px solid #30363d;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .card-pelicula:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(229, 9, 20, 0.2);
+            border-color: #e50914;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #e50914;
+        }
+        .nav-pills .nav-link {
+            color: #d0d7de;
+        }
+        .modal-content, .card-admin {
+            background-color: #161b26;
+            color: #fff;
+            border: 1px solid #30363d;
+        }
+        .form-control, .form-select {
+            background-color: #0b0f19;
+            border: 1px solid #30363d;
+            color: #fff;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #0b0f19;
+            color: #fff;
+            border-color: #e50914;
+            box-shadow: 0 0 0 0.25rem rgba(229, 9, 20, 0.25);
+        }
+        .text-muted {
+            color: #9198a1 !important;
+        }
+
+        /* DISEÑO PARA LOS BOTONES DE FUNCIONES Y SALAS */
+        .funcion-card-btn {
+            background-color: #1f2430;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            transition: all 0.25s ease-in-out;
+            text-align: left;
+            width: 100%;
+            padding: 12px 14px;
+            color: #fff;
+            position: relative;
+        }
+        .funcion-card-btn:hover:not(:disabled) {
+            background-color: #252b3b;
+            border-color: #0dcaf0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(13, 202, 240, 0.15);
+        }
+        .funcion-card-btn:disabled {
+            background-color: #121620;
+            border-color: #21262d;
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+    
