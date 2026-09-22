@@ -115,10 +115,18 @@ def get_horarios(evento_id):
     conexion = obtener_db_connection()
     cursor = conexion.cursor(dictionary=True)
     try:
+        # cursor.execute(
+        #     "SELECT id, evento_id, fecha, hora, sala, capacidad_maxima, boletos_vendidos FROM horarios WHERE evento_id = %s", 
+        #     (evento_id,)
+        # )
         cursor.execute(
-            "SELECT id, evento_id, fecha, hora, sala, capacidad_maxima, boletos_vendidos FROM horarios WHERE evento_id = %s", 
+            """SELECT id, evento_id, fecha, hora, sala, capacidad_maxima, boletos_vendidos,
+                      CAST((SELECT COALESCE(SUM(a.cantidad), 0) FROM apartados a
+                            WHERE a.horario_id = horarios.id AND a.expira_en > NOW()) AS SIGNED) AS boletos_apartados
+               FROM horarios WHERE evento_id = %s""",
             (evento_id,)
         )
+
         horarios = cursor.fetchall()
         
         for h in horarios:
@@ -183,36 +191,77 @@ def actualizar_horario(horario_id):
     finally:
         cursor.close()
         conexion.close()
+        
+SEGUNDOS_APARTADO = 30
+
+#  Apartar boletos por SEGUNDOS_APARTADO segundos (POST)
+@app.route('/api/apartados', methods=['POST'])
+def apartar_boletos():
+    data = request.get_json()
+    horario_id = data.get('horario_id')
+    cantidad = int(data.get('cantidad_boletos', 1))
+
+    conexion = obtener_db_connection()
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        # FOR UPDATE bloquea la función: dos personas no pueden apartar los mismos lugares al mismo tiempo
+        cursor.execute(
+            """SELECT capacidad_maxima, boletos_vendidos,
+                      CAST((SELECT COALESCE(SUM(cantidad), 0) FROM apartados
+                            WHERE horario_id = %s AND expira_en > NOW()) AS SIGNED) AS boletos_apartados
+               FROM horarios WHERE id = %s FOR UPDATE""",
+            (horario_id, horario_id)
+        )
+        horario = cursor.fetchone()
+
+        if not horario:
+            conexion.rollback()
+            return jsonify({"error": "La función seleccionada no existe."}), 404
+
+        disponibles = horario['capacidad_maxima'] - horario['boletos_vendidos'] - horario['boletos_apartados']
+
+        if cantidad < 1 or cantidad > disponibles:
+            conexion.rollback()
+            return jsonify({"error": f"Lo sentimos, solo quedan {disponibles} boletos disponibles para esta función."}), 400
+
+        cursor.execute(
+            "INSERT INTO apartados (horario_id, cantidad, expira_en) VALUES (%s, %s, DATE_ADD(NOW(), INTERVAL %s SECOND))",
+            (horario_id, cantidad, SEGUNDOS_APARTADO)
+        )
+        conexion.commit()
+        return jsonify({"apartado_id": cursor.lastrowid, "segundos": SEGUNDOS_APARTADO}), 201
+    except Exception as e:
+        conexion.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conexion.close()
 
 #  Registrar una reserva de boletos (POST)
 @app.route('/api/reservas', methods=['POST'])
 def crear_reserva():
     data = request.get_json()
-    horario_id = data.get('horario_id')
-    nombre_cliente = data.get('nombre_cliente')
-    cantidad_boletos = int(data.get('cantidad_boletos', 1))
+    apartado_id = data.get('apartado_id')
 
     conexion = obtener_db_connection()
     cursor = conexion.cursor(dictionary=True)
     try:
+        # Solo se puede confirmar un apartado que siga vigente
         cursor.execute(
-            "SELECT capacidad_maxima, boletos_vendidos FROM horarios WHERE id = %s", 
-            (horario_id,)
+            "SELECT horario_id, cantidad FROM apartados WHERE id = %s AND expira_en > NOW() FOR UPDATE",
+            (apartado_id,)
         )
-        horario = cursor.fetchone()
-        
-        if not horario:
-            return jsonify({"error": "La función seleccionada no existe."}), 404
+        apartado = cursor.fetchone()
 
-        disponibles = horario['capacidad_maxima'] - horario['boletos_vendidos']
-
-        if cantidad_boletos > disponibles:
-            return jsonify({"error": f"Lo sentimos, solo quedan {disponibles} boletos disponibles para esta función."}), 400
+        if not apartado:
+            conexion.rollback()
+            return jsonify({"error": "Tu apartado expiró, los boletos volvieron a quedar disponibles."}), 410
 
         cursor.execute(
             "UPDATE horarios SET boletos_vendidos = boletos_vendidos + %s WHERE id = %s",
-            (cantidad_boletos, horario_id)
+            (apartado['cantidad'], apartado['horario_id'])
         )
+        cursor.execute("DELETE FROM apartados WHERE id = %s", (apartado_id,))
 
         conexion.commit()
         return jsonify({"mensaje": "¡Boleto(s) reservado(s) y descontado(s) con éxito!"}), 201

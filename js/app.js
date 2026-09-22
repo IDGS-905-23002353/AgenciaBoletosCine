@@ -5,7 +5,7 @@
         let precioSeleccionado = 0;  // Precio de la película de la función elegida
 
         // Arrow functions (appArrow.js)
-        const calcularDisponibles = (h) => (h.capacidad_maxima || 50) - (h.boletos_vendidos || 0);
+        const calcularDisponibles = (h) => (h.capacidad_maxima || 50) - (h.boletos_vendidos || 0) - (h.boletos_apartados || 0);
 
         // Igual que en app.js: el precio ya incluye IVA, así que calculamos cuánto IVA se cobró
         const desglosarIVA = (total) => {
@@ -104,12 +104,17 @@
         };
 
         // --- 2. TEMPORIZADOR Y RESERVAS ---
-        const iniciarTemporizadorRetencion = () => {
-            let tiempo = 15; 
-            const contenedor = document.getElementById('contenedorTemporizador');
+        // false = eligiendo cantidad (botón Apartar), true = boletos apartados (botón Confirmar y temporizador)
+        const mostrarPasoApartado = (apartado) => {
+            document.getElementById('btnApartar').classList.toggle('d-none', apartado);
+            document.getElementById('btnConfirmar').classList.toggle('d-none', !apartado);
+            document.getElementById('contenedorTemporizador').classList.toggle('d-none', !apartado);
+            document.getElementById('cantidadBoletos').disabled = apartado;
+        };
+
+        const iniciarTemporizadorRetencion = (segundos) => {
+            let tiempo = segundos;
             const spanContador = document.getElementById('contador');
-            
-            contenedor.classList.remove('d-none');
             spanContador.textContent = tiempo;
 
             if (temporizadorActivo) clearInterval(temporizadorActivo);
@@ -118,15 +123,12 @@
                 tiempo--;
                 spanContador.textContent = tiempo;
 
-                if (tiempo < 0) {
+                if (tiempo <= 0) {
                     clearInterval(temporizadorActivo);
-                    contenedor.classList.remove('border-danger');
-                    contenedor.classList.add('border-warning');
-                    contenedor.innerHTML = `<strong>¡Tiempo agotado!</strong> Los asientos seleccionados han sido liberados.`;
-                    
-                    const modalEl = document.getElementById('modalReserva');
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
+                    mostrarPasoApartado(false);
+                    document.getElementById('alertaRespuesta').innerHTML =
+                        `<div class="alert alert-warning">¡Tiempo agotado! Los boletos volvieron a quedar disponibles.</div>`;
+                    cargarCartelera();
                 }
             }, 1000);
         };
@@ -155,27 +157,61 @@
             const modalReserva = new bootstrap.Modal(document.getElementById('modalReserva'));
             modalReserva.show();
 
-            iniciarTemporizadorRetencion();
+            if (temporizadorActivo) clearInterval(temporizadorActivo);
+            mostrarPasoApartado(false);
+            document.getElementById('alertaRespuesta').innerHTML = '';
         };
 
-        document.getElementById('formReservaBoleto').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const datos = {
-                horario_id: document.getElementById('horarioSeleccionadoId').value,
-                nombre_cliente: document.getElementById('nombreCliente').value,
-                cantidad_boletos: parseInt(document.getElementById('cantidadBoletos').value)
-            };
+        // Paso 1: apartar los boletos en el servidor para que nadie más los compre
+        const apartarBoletos = async () => {
             const alerta = document.getElementById('alertaRespuesta');
+            const cantidad = parseInt(document.getElementById('cantidadBoletos').value);
             const disponibles = parseInt(document.getElementById('detallesDisponibles').textContent);
 
             // Promesa con then/catch: si la cantidad no es válida, mostramos el motivo y no enviamos nada
-            const cantidadValida = await validarCantidad(datos.cantidad_boletos, disponibles)
+            const cantidadValida = await validarCantidad(cantidad, disponibles)
                 .then(() => true)
                 .catch((error) => {
                     alerta.innerHTML = `<div class="alert alert-danger">${error}</div>`;
                     return false;
                 });
             if (!cantidadValida) return;
+
+            try {
+                const res = await fetch(`${API_URL}/apartados`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        horario_id: document.getElementById('horarioSeleccionadoId').value,
+                        cantidad_boletos: cantidad
+                    })
+                });
+                const { apartado_id, segundos, error } = await res.json();
+
+                if (!res.ok) {
+                    alerta.innerHTML = `<div class="alert alert-danger">${error || 'Error al apartar'}</div>`;
+                    cargarCartelera();
+                    return;
+                }
+
+                document.getElementById('apartadoId').value = apartado_id;
+                alerta.innerHTML = '';
+                mostrarPasoApartado(true);
+                iniciarTemporizadorRetencion(segundos);
+                cargarCartelera();
+            } catch (e) { console.error(e); }
+        };
+
+        // Paso 2: confirmar la compra del apartado
+        document.getElementById('formReservaBoleto').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const datos = {
+                apartado_id: document.getElementById('apartadoId').value,
+                horario_id: document.getElementById('horarioSeleccionadoId').value,
+                nombre_cliente: document.getElementById('nombreCliente').value,
+                cantidad_boletos: parseInt(document.getElementById('cantidadBoletos').value)
+            };
+            const alerta = document.getElementById('alertaRespuesta');
 
             try {
                 const res = await fetch(`${API_URL}/reservas`, {
@@ -195,9 +231,17 @@
                         IVA (16%): $${ivaTotal.toFixed(2)}<br>
                         <strong>Total a pagar: $${total.toFixed(2)}</strong></div>`;
                     if (temporizadorActivo) clearInterval(temporizadorActivo);
-                    esperar(2000).then(() => location.reload());
+                    // Compra terminada: quitamos el aviso de apartado y el botón de confirmar
+                    document.getElementById('contenedorTemporizador').classList.add('d-none');
+                    document.getElementById('btnConfirmar').classList.add('d-none');
+                    cargarCartelera();
+                    // esperar(2000).then(() => location.reload());
                 } else {
                     alerta.innerHTML = `<div class="alert alert-danger">${mensajeError || 'Error al procesar'}</div>`;
+                    // Por ejemplo, el apartado ya expiró: volvemos al paso de apartar
+                    if (temporizadorActivo) clearInterval(temporizadorActivo);
+                    mostrarPasoApartado(false);
+                    cargarCartelera();
                 }
             } catch (e) { console.error(e); }
         });

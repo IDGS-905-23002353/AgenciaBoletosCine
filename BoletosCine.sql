@@ -22,6 +22,15 @@ CREATE TABLE IF NOT EXISTS horarios (
     FOREIGN KEY (evento_id) REFERENCES eventos(id) ON DELETE CASCADE
 );
 
+-- Boletos apartados temporalmente: mientras expira_en no pase, nadie mas los puede comprar
+CREATE TABLE IF NOT EXISTS apartados (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    horario_id INT NOT NULL,
+    cantidad INT NOT NULL,
+    expira_en DATETIME NOT NULL,
+    FOREIGN KEY (horario_id) REFERENCES horarios(id) ON DELETE CASCADE
+);
+
 
 INSERT INTO eventos (titulo, descripcion, precio) VALUES 
 ('Avatar: El camino del agua', 'Una aventura épica de ciencia ficción en Pandora.', 85.50),

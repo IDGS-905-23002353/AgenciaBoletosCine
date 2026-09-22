@@ -38,11 +38,6 @@
             
             <!-- Cartelera -->
             <div class="tab-pane fade show active" id="cartelera-pane" role="tabpanel">
-                <div id="contenedorTemporizador" class="alert alert-danger text-center d-none rounded-4 shadow-sm mb-4 border-danger bg-opacity-25" role="alert">
-                    <h5 class="alert-heading m-0"><i class="bi bi-clock-history me-2"></i>¡Tus asientos están retenidos temporalmente!</h5>
-                    <p class="mb-0 mt-1">Completa tu reserva antes de que expire el tiempo: <span id="contador" class="fw-bold fs-4 text-warning">10</span> segundos</p>
-                </div>
-
                 <div class="row mb-4">
                     <div class="col-12">
                         <h2 class="fw-bold text-white mb-1">Películas en Cartelera</h2>
@@ -112,7 +107,13 @@
                             <label class="form-label text-light small">Número de Boletos</label>
                             <input type="number" class="form-control" id="cantidadBoletos" min="1" value="1" required>
                         </div>
-                        <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold rounded-pill">Confirmar y Pagar</button>
+                        <div id="contenedorTemporizador" class="alert alert-warning text-center d-none">
+                            <i class="bi bi-clock-history me-1"></i>Boletos apartados. Confirma antes de que termine el tiempo:
+                            <span id="contador" class="fw-bold fs-5">30</span> segundos
+                        </div>
+                        <input type="hidden" id="apartadoId">
+                        <button type="button" id="btnApartar" class="btn btn-danger w-100 py-2 fw-semibold rounded-pill" onclick="apartarBoletos()">Apartar boletos</button>
+                        <button type="submit" id="btnConfirmar" class="btn btn-success w-100 py-2 fw-semibold rounded-pill d-none">Confirmar y Pagar</button>
                     </form>
                     <div id="alertaRespuesta" class="mt-3"></div>
                 </div>
