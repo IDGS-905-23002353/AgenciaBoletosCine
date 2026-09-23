@@ -1,3 +1,15 @@
+        // ---------- Registro del Service Worker (código de clase) ----------
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", async () => {
+                try {
+                    const registro = await navigator.serviceWorker.register("./service-worker.js");
+                    console.log("Service Worker registrado correctamente:", registro.scope);
+                } catch (error) {
+                    console.error("Error al registrar Service Worker:", error);
+                }
+            });
+        }
+
           const API_URL = 'http://localhost:5000/api';
         let temporizadorActivo = null;
         const IVA = 0.16;
@@ -478,6 +490,10 @@
         });
 
         const eliminarPelicula = async (id) => {
+            if (!navigator.onLine) {
+                alert('Sin conexión: para eliminar una película necesitas internet.');
+                return;
+            }
             if (confirm('¿Estás seguro de eliminar esta película y sus funciones?')) {
                 try {
                     const res = await fetch(`${API_URL}/eventos/${id}`, { method: 'DELETE' });
@@ -490,6 +506,21 @@
         };
 
 
+        // ---------- Detección de conexión (navigator.onLine) ----------
+        const actualizarRed = () => {
+            const enLinea = navigator.onLine;
+            document.getElementById('bannerOffline').classList.toggle('d-none', enLinea);
+            // Apartar, comprar y guardar en el admin necesitan al servidor
+            document.querySelectorAll('#btnApartar, #btnConfirmar, #formCrudPelicula button[type="submit"]')
+                .forEach((boton) => { boton.disabled = !enLinea; });
+        };
+
+        window.addEventListener('online', actualizarRed);
+        window.addEventListener('online', () => cargarCartelera());  // al volver el internet se actualiza la cartelera
+        window.addEventListener('offline', actualizarRed);
+
         cargarCartelera();
         cargarAdminPeliculas();
+        actualizarRed();
+        
  

@@ -1,0 +1,15 @@
+{
+    "name": "CineLait - Reserva de Funciones",
+    "short_name": "CineLait",
+    "description": "Cartelera y reserva de boletos de cine con soporte offline",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#0b0f19",
+    "theme_color": "#e50914",
+    "icons": [
+        { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+        { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    ]
+}
