@@ -23,6 +23,7 @@ def gestionar_eventos():
         titulo = data.get('titulo')
         descripcion = data.get('descripcion')
         precio = data.get('precio')
+        imagen_base64 = data.get('imagen_base64', '')
         
         fecha = data.get('fecha')
         hora = data.get('hora')
@@ -34,8 +35,9 @@ def gestionar_eventos():
         try:
         
             cursor.execute(
-                "INSERT INTO eventos (titulo, descripcion, precio) VALUES (%s, %s, %s)", 
-                (titulo, descripcion, precio)
+                "INSERT INTO eventos (titulo, descripcion, precio, imagen_base64) VALUES (%s, %s, %s, %s)", 
+                (titulo, descripcion, precio, imagen_base64)
+            
             )
             evento_id = cursor.lastrowid # Obtenemos el ID generado de la película
             
@@ -58,7 +60,7 @@ def gestionar_eventos():
         conexion = obtener_db_connection()
         cursor = conexion.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT id, titulo, descripcion, precio FROM eventos")
+            cursor.execute("SELECT id, titulo, descripcion, precio, imagen_base64 FROM eventos")
             peliculas = cursor.fetchall()
             return jsonify(peliculas)
         except Exception as e:
@@ -75,14 +77,21 @@ def modificar_pelicula(id):
         titulo = data.get('titulo')
         descripcion = data.get('descripcion')
         precio = data.get('precio')
+        imagen_base64 = data.get('imagen_base64')
         
         conexion = obtener_db_connection()
         cursor = conexion.cursor()
         try:
-            cursor.execute(
-                "UPDATE eventos SET titulo = %s, descripcion = %s, precio = %s WHERE id = %s",
-                (titulo, descripcion, precio, id)
-            )
+            if imagen_base64:
+                cursor.execute(
+                    "UPDATE eventos SET titulo = %s, descripcion = %s, precio = %s, imagen_base64 = %s WHERE id = %s",
+                    (titulo, descripcion, precio, imagen_base64, id)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE eventos SET titulo = %s, descripcion = %s, precio = %s WHERE id = %s",
+                    (titulo, descripcion, precio, id)
+                )
             conexion.commit()
             return jsonify({"mensaje": "Película actualizada con éxito"})
         except Exception as e:

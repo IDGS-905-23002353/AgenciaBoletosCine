@@ -38,7 +38,17 @@
         // Promesa que se resuelve después de "ms" milisegundos (setTimeout dentro de una Promesa)
         const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-        // --- 1. CARGAR CARTELERA ---
+        // Promesa para convertir la imagen seleccionada a Base64
+        const convertirBase64 = (archivo) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(archivo);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        };
+
+        // CARGAR CARTELERA
         const cargarCartelera = async () => {
             try {
                 const res = await fetch(`${API_URL}/eventos`);
@@ -93,29 +103,33 @@
                         badgesHorarios = '<span class="text-danger small">Error al cargar horarios</span>';
                     }
 
+                    // Modificación: Se añade la etiqueta <img> para mostrar la imagen en Base64 guardada en la BD
                     grid.innerHTML += `
-                        <div class="col-md-4">
-                            <div class="card card-pelicula h-100 shadow-sm p-3">
-                                <div class="card-body d-flex flex-column">
-                                    <h4 class="card-title fw-bold text-white mb-2">${pelicula.titulo}</h4>
-                                    <p class="card-text text-muted small flex-grow-1">${pelicula.descripcion || 'Sin descripción'}</p>
-                                    <div class="mb-3">
-                                        <span class="text-danger fw-bold fs-5">$${pelicula.precio} MXN</span>
-                                    </div>
-                                    <hr class="border-secondary">
-                                    <p class="text-uppercase text-white small fw-bold mb-2">Funciones y Salas${resumenFunciones}:</p>
-                                    <div class="d-flex flex-column">${badgesHorarios}</div>
-                                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card card-pelicula h-100 shadow-sm p-3">
+                        <img src="${pelicula.imagen_base64 || ''}" class="card-img-top rounded-3 mb-2" alt="${pelicula.titulo}" style="height: 160px; object-fit: cover;">            
+                        <div class="card-body d-flex flex-column p-0">
+                            <h4 class="card-title fw-bold text-white mb-2">${pelicula.titulo}</h4>
+                            <p class="card-text text-muted small flex-grow-1">${pelicula.descripcion || 'Sin descripción'}</p>
+                            <div class="mb-3">
+                                <span class="text-danger fw-bold fs-5">$${pelicula.precio} MXN</span>
                             </div>
+                            <hr class="border-secondary">
+                            <p class="text-muted small mb-2"><i class="bi bi-info-circle me-1"></i>${resumenFunciones}</p>
+                            <button class="btn btn-primary w-100 mt-auto" onclick="abrirModalHorarios(${pelicula.id})">
+                                <i class="bi bi-ticket-perforated me-1"></i> Reservar boletos
+                            </button>
                         </div>
-                    `;
+                    </div>
+                </div>
+            `;
                 }
             } catch (e) {
                 console.error('Error al conectar con la API de eventos:', e);
             }
         };
 
-        // --- 2. TEMPORIZADOR Y RESERVAS ---
+        // --- Función para mostrar el paso de apartado ---
         // false = eligiendo cantidad (botón Apartar), true = boletos apartados (botón Confirmar y temporizador)
         const mostrarPasoApartado = (apartado) => {
             document.getElementById('btnApartar').classList.toggle('d-none', apartado);
@@ -124,26 +138,7 @@
             document.getElementById('cantidadBoletos').disabled = apartado;
         };
 
-        const iniciarTemporizadorRetencion = (segundos) => {
-            let tiempo = segundos;
-            const spanContador = document.getElementById('contador');
-            spanContador.textContent = tiempo;
 
-            if (temporizadorActivo) clearInterval(temporizadorActivo);
-
-            temporizadorActivo = setInterval(() => {
-                tiempo--;
-                spanContador.textContent = tiempo;
-
-                if (tiempo <= 0) {
-                    clearInterval(temporizadorActivo);
-                    mostrarPasoApartado(false);
-                    document.getElementById('alertaRespuesta').innerHTML =
-                        `<div class="alert alert-warning">¡Tiempo agotado! Los boletos volvieron a quedar disponibles.</div>`;
-                    cargarCartelera();
-                }
-            }, 1000);
-        };
 
         const seleccionarHorario = (horarioId, tituloPelicula, fecha, hora, sala, disponibles, peliculaId) => {
             if (disponibles <= 0) {
@@ -173,6 +168,247 @@
             mostrarPasoApartado(false);
             document.getElementById('alertaRespuesta').innerHTML = '';
         };
+
+        // Función para abrir el modal que lista los horarios disponibles de una película
+const abrirModalHorarios = async (peliculaId) => {
+    const pelicula = peliculas.find(p => p.id === peliculaId);
+    if (!pelicula) return;
+
+    document.getElementById('modalHorariosTituloPelicula').textContent = pelicula.titulo;
+    const contenedorLista = document.getElementById('listaHorariosModal');
+    contenedorLista.innerHTML = '<p class="text-muted text-center">Cargando funciones...</p>';
+
+    // Mostramos el modal de horarios (asegúrate de tener este modal en tu HTML)
+    const modalHorariosEl = document.getElementById('modalHorarios');
+    const modalHorarios = new bootstrap.Modal(modalHorariosEl);
+    modalHorarios.show();
+
+    try {
+        const resHorarios = await fetch(`${API_URL}/horarios/${peliculaId}`);
+        const horarios = await resHorarios.json();
+
+        contenedorLista.innerHTML = '';
+
+        if (horarios && horarios.length > 0) {
+            horarios.forEach(h => {
+                const disponibles = calcularDisponibles(h);
+                const estaAgotado = disponibles <= 0;
+
+                contenedorLista.innerHTML += `
+                    <button class="funcion-card-btn mb-2 w-100 text-start p-3 bg-dark border border-secondary rounded"
+                            onclick="cerrarModalYSeleccionar(${h.id}, '${pelicula.titulo.replace(/'/g, "\\'")}', '${h.fecha}', '${h.hora}', '${h.sala}', ${disponibles}, ${pelicula.id})"
+                            ${estaAgotado ? 'disabled' : ''}>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted"><i class="bi bi-calendar-event me-1"></i>${h.fecha}</span>
+                            <span class="badge ${estaAgotado ? 'bg-danger' : 'bg-success'} px-2 py-1">${estaAgotado ? 'Agotado' : disponibles + ' disp.'}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fs-6 fw-bold text-info"><i class="bi bi-clock me-1"></i>${h.hora}</span>
+                            <span class="badge bg-secondary text-light border border-secondary px-2 py-1"><i class="bi bi-door-open me-1"></i>${h.sala}</span>
+                        </div>
+                    </button>
+                `;
+            });
+        } else {
+            contenedorLista.innerHTML = '<p class="text-muted text-center">No hay funciones disponibles para esta película.</p>';
+        }
+    } catch (err) {
+        contenedorLista.innerHTML = '<p class="text-danger text-center">Error al cargar los horarios.</p>';
+    }
+};
+
+        // Función auxiliar para cerrar el modal de horarios y abrir de inmediato el modal de reserva/compra que ya tenías
+        const cerrarModalYSeleccionar = (horarioId, tituloPelicula, fecha, hora, sala, disponibles, peliculaId) => {
+            const modalHorariosEl = document.getElementById('modalHorarios');
+            const modalHorariosInstance = bootstrap.Modal.getInstance(modalHorariosEl);
+            if (modalHorariosInstance) {
+                modalHorariosInstance.hide();
+            }
+            // Llamamos a tu función original para gestionar la selección de asientos/boletos
+            seleccionarHorario(horarioId, tituloPelicula, fecha, hora, sala, disponibles, peliculaId);
+        };
+
+
+let asientosOcupadosGlobales = JSON.parse(localStorage.getItem("asientosOcupados")) || ["A-3", "B-5", "C-2", "D-7"];
+let asientosSeleccionados = [];
+
+function generarMapaAsientos() {
+    const contenedorGrid = document.getElementById("gridAsientos");
+    if (!contenedorGrid) return;
+    contenedorGrid.innerHTML = "";
+
+    const filas = ['A', 'B', 'C', 'D'];
+    const columnasPorFila = 8;
+
+    filas.forEach(letraFila => {
+        const filaDiv = document.createElement("div");
+        filaDiv.className = "d-flex gap-2 align-items-center mb-2";
+
+        // Etiqueta de la fila (Ej. A, B, C...)
+        const etiquetaFila = document.createElement("span");
+        etiquetaFila.className = "text-muted fw-bold small me-2";
+        etiquetaFila.style.width = "20px";
+        etiquetaFila.innerText = letraFila;
+        filaDiv.appendChild(etiquetaFila);
+
+        for (let i = 1; i <= columnasPorFila; i++) {
+            const idAsiento = `${letraFila}-${i}`;
+            const btnAsiento = document.createElement("button");
+            btnAsiento.type = "button";
+            btnAsiento.innerText = i;
+            btnAsiento.style.width = "32px";
+            btnAsiento.style.height = "32px";
+            btnAsiento.style.fontSize = "0.75rem";
+
+            
+            btnAsiento.className = "btn btn-sm p-0 rounded";
+
+            if (asientosOcupadosGlobales.includes(idAsiento)) {
+                // Estado: Ocupado (Gris y deshabilitado)
+                btnAsiento.classList.add("btn-secondary", "disabled");
+                btnAsiento.disabled = true;
+                btnAsiento.onclick = null;
+            } else if (asientosSeleccionados.includes(idAsiento)) {
+                // Estado: Seleccionado por el usuario (Rojo)
+                btnAsiento.classList.add("btn-danger", "text-white", "fw-bold");
+                btnAsiento.disabled = false;
+                btnAsiento.onclick = () => alternarSeleccionAsiento(idAsiento);
+            } else {
+                // Estado: Disponible (Contorno verde)
+                btnAsiento.classList.add("btn-outline-success");
+                btnAsiento.disabled = false;
+                btnAsiento.onclick = () => alternarSeleccionAsiento(idAsiento);
+            }
+
+            filaDiv.appendChild(btnAsiento);
+        }
+
+        contenedorGrid.appendChild(filaDiv);
+    });
+}
+
+function alternarSeleccionAsiento(idAsiento) {
+    const index = asientosSeleccionados.indexOf(idAsiento);
+    if (index > -1) {
+        asientosSeleccionados.splice(index, 1);
+    } else {
+        asientosSeleccionados.push(idAsiento);
+        
+        // Si es la primera selección, iniciamos el temporizador
+        if (asientosSeleccionados.length === 1) {
+            iniciarTemporizadorRetencion(30); 
+        }
+    }
+
+    // Si deseleccionó todos, detenemos el temporizador
+    if (asientosSeleccionados.length === 0 && temporizadorActivo) {
+        clearInterval(temporizadorActivo);
+        temporizadorActivo = null;
+    }
+
+    actualizarResumenAsientos();
+    generarMapaAsientos(); 
+}
+
+function actualizarResumenAsientos() {
+    const contenedorLista = document.getElementById("listaAsientosSeleccionados");
+    const contadorVisual = document.getElementById("contadorBoletosVisual");
+    const inputCantidadOculto = document.getElementById("cantidadBoletos");
+
+    if (contadorVisual) contadorVisual.innerText = asientosSeleccionados.length;
+    if (inputCantidadOculto) inputCantidadOculto.value = asientosSeleccionados.length;
+
+    if (contenedorLista) {
+        if (asientosSeleccionados.length === 0) {
+            contenedorLista.innerHTML = `<span class="text-muted italic small">Ningún asiento seleccionado</span>`;
+        } else {
+            contenedorLista.innerHTML = asientosSeleccionados
+                .map(asiento => `<span class="badge bg-danger text-white me-1">${asiento}</span>`)
+                .join(' ');
+        }
+    }
+}
+
+// Función de temporizador
+const iniciarTemporizadorRetencion = (segundos) => {
+    let tiempo = segundos;
+    const spanContador = document.getElementById('contador');
+    if (spanContador) spanContador.textContent = tiempo;
+
+    if (temporizadorActivo) clearInterval(temporizadorActivo);
+
+    temporizadorActivo = setInterval(() => {
+        tiempo--;
+        if (spanContador) spanContador.textContent = tiempo;
+
+        if (tiempo <= 0) {
+            clearInterval(temporizadorActivo);
+            temporizadorActivo = null;
+            
+            // Liberamos los asientos al agotarse el tiempo
+            asientosSeleccionados = [];
+            actualizarResumenAsientos();
+            generarMapaAsientos();
+
+            if (typeof mostrarPasoApartado === 'function') {
+                mostrarPasoApartado(false);
+            }
+            
+            const alerta = document.getElementById('alertaRespuesta');
+            if (alerta) {
+                alerta.innerHTML = `<div class="alert alert-warning">¡Tiempo agotado! Los boletos volvieron a quedar disponibles.</div>`;
+            }
+        }
+    }, 1000);
+};
+
+function confirmarPagoAsientos() {
+    if (asientosSeleccionados.length === 0) {
+        alert("No hay asientos seleccionados para pagar.");
+        return;
+    }
+
+   
+    if (temporizadorActivo) {
+        clearInterval(temporizadorActivo);
+        temporizadorActivo = null;
+    }
+
+    // Copiamos temporalmente los asientos que se acaban de comprar para mostrarlos en el modal
+    const asientosComprados = [...asientosSeleccionados];
+
+    asientosOcupadosGlobales.push(...asientosComprados);
+
+
+    localStorage.setItem("asientosOcupados", JSON.stringify(asientosOcupadosGlobales));
+
+    asientosSeleccionados = [];
+    
+    actualizarResumenAsientos();
+    generarMapaAsientos();
+
+    // Generamos un código aleatorio para la reserva (ejemplo: CINE-1234)
+    const codigoAleatorio = "CINE-" + Math.floor(1000 + Math.random() * 9000);
+
+    
+    document.getElementById("codigoReservaTexto").innerText = codigoAleatorio;
+    
+    const contenedorModalAsientos = document.getElementById("asientosCompradosLista");
+    contenedorModalAsientos.innerHTML = asientosComprados
+        .map(asiento => `<span class="badge bg-secondary fs-6">${asiento}</span>`)
+        .join(' ');
+
+
+    const modalAsientosElement = document.getElementById('modalReserva'); 
+    if (modalAsientosElement) {
+        const modalAsientosBs = bootstrap.Modal.getInstance(modalAsientosElement) || new bootstrap.Modal(modalAsientosElement);
+        modalAsientosBs.hide();
+    }
+
+    const modalElement = document.getElementById('modalTicket');
+    const modalBootstrap = new bootstrap.Modal(modalElement);
+    modalBootstrap.show();
+}
 
         // Paso 1: apartar los boletos en el servidor para que nadie más los compre
         const apartarBoletos = async () => {
@@ -258,11 +494,12 @@
             } catch (e) { console.error(e); }
         });
 
-        // --- 3. PANEL ADMIN CRUD CON EDICIÓN Y CREACIÓN DE HORARIOS ---
+        // --- Cargar Películas para el Panel Admin ---
         const cargarAdminPeliculas = async () => {
             try {
                 const res = await fetch(`${API_URL}/eventos`);
                 peliculas = await res.json();
+                console.log("Datos cargados en peliculas:", peliculas); // Añade esto para depurar
                 const tbody = document.getElementById('tablaAdminBody');
                 tbody.innerHTML = '';
 
@@ -406,10 +643,23 @@
             `;
         };
 
-        // Envío unificado para Crear (POST) o Actualizar Película, modificar horarios existentes y crear nuevos
+        
+
+ // Envío unificado para Crear o Actualizar Película (MODIFICADO para enviar la imagen Base64)
         document.getElementById('formCrudPelicula').addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('peliculaId').value;
+            
+            // Capturar archivo de imagen y transformarlo a Base64 si el usuario seleccionó uno
+            const inputArchivo = document.getElementById('inputImagen');
+            let imagenBase64 = '';
+            if (inputArchivo && inputArchivo.files[0]) {
+                try {
+                    imagenBase64 = await convertirBase64(inputArchivo.files[0]);
+                } catch (err) {
+                    console.error("Error al convertir la imagen:", err);
+                }
+            }
             
             if (!id) {
                 // MODO CREAR
@@ -417,6 +667,7 @@
                     titulo: document.getElementById('inputTitulo').value,
                     descripcion: document.getElementById('inputDescripcion').value,
                     precio: parseFloat(document.getElementById('inputPrecio').value),
+                    imagen_base64: imagenBase64, // Enviamos el Base64
                     fecha: document.getElementById('inputFecha').value,
                     hora: document.getElementById('inputHora').value,
                     sala: document.getElementById('inputSala').value,
@@ -432,12 +683,17 @@
                 else alert('Error al crear la película');
 
             } else {
-                // MODO EDITAR: Actualiza datos generales de la película
+                // MODO EDITAR
                 const datosPelicula = {
                     titulo: document.getElementById('inputTitulo').value,
                     descripcion: document.getElementById('inputDescripcion').value,
                     precio: parseFloat(document.getElementById('inputPrecio').value)
                 };
+
+                // Si seleccionaron una nueva imagen al editar, la mandamos también
+                if (imagenBase64) {
+                    datosPelicula.imagen_base64 = imagenBase64;
+                }
 
                 const resPeli = await fetch(`${API_URL}/eventos/${id}`, {
                     method: 'PUT',
@@ -445,7 +701,6 @@
                     body: JSON.stringify(datosPelicula)
                 });
 
-                // 1. Actualizar los horarios existentes modificados
                 const itemsHorarios = document.querySelectorAll('.horario-item');
                 for (let item of itemsHorarios) {
                     const horarioId = item.getAttribute('data-horario-id');
@@ -522,5 +777,6 @@
         cargarCartelera();
         cargarAdminPeliculas();
         actualizarRed();
+        generarMapaAsientos()
         
  

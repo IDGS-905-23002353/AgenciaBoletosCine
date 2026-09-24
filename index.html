@@ -19,16 +19,16 @@
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-black border-bottom border-secondary py-3">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-black border-bottom border-secondary py-1">
         <div class="container">
-            <a class="navbar-brand text-danger fs-3" href="#"></i>CINE<span class="text-white">LAIT</span></a>
+            <a class="navbar-brand text-danger fs-2" href="#"></i>CINE<span class="text-white">LAIT</span></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <ul class="nav nav-pills gap-2" id="cineTabs" role="tablist">
                     <li class="nav-item">
-                        <button class="nav-link active rounded-pill px-4 fw-semibold" id="cartelera-tab" data-bs-toggle="pill" data-bs-target="#cartelera-pane" type="button">Cartelera y Funciones</button>
+                        <button class="nav-link active rounded-pill px-4 fw-semibold" id="cartelera-tab" data-bs-toggle="pill" data-bs-target="#cartelera-pane" type="button">Cartelera</button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link rounded-pill px-4 fw-semibold" id="admin-tab" data-bs-toggle="pill" data-bs-target="#admin-pane" type="button">Panel Administrativo</button>
@@ -42,14 +42,56 @@
         <i class="bi bi-wifi-off me-2"></i>Sin conexión: estás viendo la última cartelera guardada. Para apartar o comprar boletos necesitas internet.
     </div>
 
-    <div class="container py-5">
+    <div class="container py-3">
         <div class="tab-content" id="cineContent">
             
             <!-- Cartelera -->
             <div class="tab-pane fade show active" id="cartelera-pane" role="tabpanel">
+                
+                <!-- INICIO DEL CARRUSEL DE PELÍCULAS -->
+                <div id="carruselPeliculas" class="carousel slide mb-5 shadow rounded-4 overflow-hidden" data-bs-ride="carousel">
+                    <div class="carousel-indicators">
+                        <button type="button" data-bs-target="#carruselPeliculas" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                        <button type="button" data-bs-target="#carruselPeliculas" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                        <button type="button" data-bs-target="#carruselPeliculas" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                    </div>
+                    <div class="carousel-inner">
+                        <div class="carousel-item active" data-bs-interval="4000">
+                            <img src="img/pelicula2.png" class="d-block w-100" alt="Estreno 1" style="height: 300px; object-fit: cover;">
+                            <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded px-3">
+                                <h5 class="fw-bold text-danger">Gran Estreno</h5>
+                                <p class="text-light small">Disfruta de las mejores funciones esta semana.</p>
+                            </div>
+                        </div>
+                        <div class="carousel-item" data-bs-interval="4000">
+                            <img src="img/pelicula3.png" class="d-block w-100" alt="Estreno 2" style="height: 300px; object-fit: cover;">
+                            <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded px-3">
+                                <h5 class="fw-bold text-info">Preventa Exclusiva</h5>
+                                <p class="text-light small">Aparta tus boletos antes que nadie.</p>
+                            </div>
+                        </div>
+                        <div class="carousel-item" data-bs-interval="4000">
+                            <img src="img/pelicula2.png" class="d-block w-100" alt="Estreno 3" style="height: 300px; object-fit: cover;">
+                            <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded px-3">
+                                <h5 class="fw-bold text-warning">Funciones Especiales</h5>
+                                <p class="text-light small">Consulta horarios y salas disponibles.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#carruselPeliculas" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Anterior</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#carruselPeliculas" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Siguiente</span>
+                    </button>
+                </div>
+                <!-- FIN DEL CARRUSEL -->
+            
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h2 class="fw-bold text-white mb-1">Películas en Cartelera</h2>
+                        <h2 class="fw-bold text-black mb-1">Películas en Cartelera</h2>
                         <p class="text-muted">Selecciona una película, elige tu función y aparta tus boletos.</p>
                     </div>
                 </div>
@@ -64,15 +106,16 @@
                 <div class="card card-admin p-4 rounded-4 shadow">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
-                            <h3 class="fw-bold text-white mb-0">Gestión de Cartelera</h3>
+                            <h3 class="fw-bold text-black mb-0">Gestión de Cartelera</h3>
                             <p class="text-muted small mb-0">Administra las películas, descripciones y precios del sistema</p>
                         </div>
                         <button class="btn btn-danger rounded-pill px-4 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPelicula" onclick="prepararCreacion()"><i class="bi bi-plus-lg me-1"></i> Nueva Película</button>
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table table-dark table-hover align-middle border-secondary">
-                            <thead>
+                        
+                        <table class="table table-hover align-middle border-secondary">
+                            <thead class="table-secondary">
                                 <tr>
                                     <th>ID</th>
                                     <th>Película</th>
@@ -90,39 +133,97 @@
         </div>
     </div>
 
-    <!-- Modal de Reserva -->
+   <!-- Modal de Reserva con Mapa de Asientos -->
     <div class="modal fade" id="modalReserva" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-xl"> <!-- Cambiado a modal-xl para dar espacio al mapa -->
             <div class="modal-content border-secondary bg-dark text-white">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold text-danger">Reservar Boletos</h5>
+                    <h5 class="modal-title fw-bold text-danger">Selecciona tus Asientos</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="formReservaBoleto">
                         <input type="hidden" id="horarioSeleccionadoId">
-                        <div class="p-3 mb-3 bg-secondary bg-opacity-10 border border-secondary rounded-3">
-                            <h6 class="text-info fw-bold mb-2" id="detallesPelículaTitulo"></h6>
-                            <p class="mb-1 small"><i class="bi bi-calendar-event me-2 text-danger"></i><strong>Fecha:</strong> <span id="detallesFecha" class="text-light"></span></p>
-                            <p class="mb-1 small"><i class="bi bi-clock me-2 text-info"></i><strong>Hora:</strong> <span id="detallesHora" class="text-info fw-bold"></span></p>
-                            <p class="mb-1 small"><i class="bi bi-door-open me-2 text-danger"></i><strong>Sala:</strong> <span id="detallesSala" class="text-light"></span></p>
-                            <p class="mb-0 small"><i class="bi bi-people me-2 text-danger"></i><strong>Disponibles:</strong> <span id="detallesDisponibles" class="text-success fw-bold"></span> asientos</p>
+                        
+                        <div class="row">
+                            <!-- COLUMNA IZQUIERDA: DETALLES Y MAPA DE ASIENTOS -->
+                            <div class="col-lg-8 border-end border-secondary pe-lg-4">
+                                <!-- Detalles de la función -->
+                                <div class="p-3 mb-3 bg-secondary bg-opacity-10 border border-secondary rounded-3">
+                                    <h6 class="text-info fw-bold mb-2" id="detallesPelículaTitulo"></h6>
+                                    <div class="row text-small">
+                                        <div class="col-sm-6 mb-1"><i class="bi bi-calendar-event me-2 text-danger"><strong>Fecha:</strong></i> <span id="detallesFecha" class="text-light"></span></div>
+                                        <div class="col-sm-6 mb-1"><i class="bi bi-clock me-2 text-info"><strong>Hora:</strong></i> <span id="detallesHora" class="text-info fw-bold"></span></div>
+                                        <div class="col-sm-6 mb-1"><i class="bi bi-door-open me-2 text-danger"><strong>Sala:</strong></i> <span id="detallesSala" class="text-light"></span></div>
+                                        <div class="col-sm-6 mb-0"><i class="bi bi-people me-2 text-danger"><strong>Disponibles:</strong></i> <span id="detallesDisponibles" class="text-success fw-bold"></span></div>
+                                    </div>
+                                </div>
+
+                                <!-- MAPA DE ASIENTOS -->
+                                <div class="text-center bg-black p-3 rounded-3 border border-secondary mb-3">
+                                    <div class="w-100 bg-secondary text-dark text-center fw-bold py-1 rounded mb-4 tracking-widest small shadow-sm">
+                                        PANTALLA / SALA DE CINE
+                                    </div>
+
+                                    <!-- Leyenda -->
+                                    <div class="d-flex justify-content-center gap-4 mb-3 text-muted small">
+                                        <div class="leyenda-item">
+                                            <span class="punto-disponible" style="background-color: #10b981; display: inline-block; width: 12px; height: 12px; border-radius: 50%;"></span>
+                                            <span>Disponible</span>
+                                        </div>
+                                        <div><span class="d-inline-block rounded bg-danger" style="width: 15px; height: 15px;"></span> Seleccionado</div>
+                                        <div><span class="d-inline-block rounded bg-secondary" style="width: 15px; height: 15px;"></span> Ocupado</div>
+                                    </div>
+
+                                    <!-- Cuadrícula dinámica de asientos -->
+                                    <div id="gridAsientos" class="d-flex flex-column align-items-center gap-2 mb-2">
+                                        <!-- Se inyecta con JS -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- COLUMNA DERECHA: CARRITO Y CONFIRMACIÓN -->
+                            <div class="col-lg-4 ps-lg-4 d-flex flex-column justify-content-between">
+                                <div>
+                                    <h6 class="fw-bold text-light mb-3 border-bottom pb-2">Tu Carrito</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label text-light small">Nombre del Espectador</label>
+                                        <input type="text" class="form-control bg-dark text-white border-secondary" id="nombreCliente" placeholder="Ej. Carlos Santana" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label text-light small">Asientos Elegidos</label>
+                                        <div id="listaAsientosSeleccionados" class="d-flex flex-wrap gap-1 p-2 bg-secondary bg-opacity-20 rounded border border-secondary min-h-40 text-sm">
+                                            <span class="text-muted italic small">Ningún asiento seleccionado</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-4 p-2 bg-secondary bg-opacity-10 rounded">
+                                        <span class="text-light fw-bold">Total Boletos:</span>
+                                        <span id="contadorBoletosVisual" class="fs-4 text-danger fw-bold">0</span>
+                                    </div>
+                                     <!-- Espacio para el desglose financiero -->
+                                    <div id="desglosePrecios" class="mb-3 p-2 bg-light rounded border small">
+                                        <div class="text-muted">Subtotal: $0.00</div>
+                                        <div class="text-muted">IVA (16%): $0.00</div>
+                                        <div class="fw-bold text-dark">Total: $0.00</div>
+                                    </div>
+
+                                    <!-- Input oculto para conservar la lógica numérica que usa tu JS actual -->
+                                    <input type="hidden" id="cantidadBoletos" value="0">
+                                </div>
+
+                                <div>
+                                    <div id="contenedorTemporizador" class="alert alert-warning text-center d-none p-2 small mb-3">
+                                        <i class="bi bi-clock-history me-1"></i>Confirma antes de que termine: <span id="contador" class="fw-bold">30</span>s
+                                    </div>
+                                    <input type="hidden" id="apartadoId">
+                                    <button type="button" id="btnApartar" class="btn btn-danger w-100 py-2 fw-semibold rounded-pill mb-2" onclick="apartarBoletos()">Apartar boletos</button>
+                                    <button type="button" id="btnConfirmar" onclick="confirmarPagoAsientos()" class="btn btn-danger w-100 py-2 fw-semibold rounded-pill d-none">Confirmar y Pagar</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label text-light small">Nombre del Espectador</label>
-                            <input type="text" class="form-control" id="nombreCliente" placeholder="Ej. Carlos Santana" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-light small">Número de Boletos</label>
-                            <input type="number" class="form-control" id="cantidadBoletos" min="1" value="1" required>
-                        </div>
-                        <div id="contenedorTemporizador" class="alert alert-warning text-center d-none">
-                            <i class="bi bi-clock-history me-1"></i>Boletos apartados. Confirma antes de que termine el tiempo:
-                            <span id="contador" class="fw-bold fs-5">30</span> segundos
-                        </div>
-                        <input type="hidden" id="apartadoId">
-                        <button type="button" id="btnApartar" class="btn btn-danger w-100 py-2 fw-semibold rounded-pill" onclick="apartarBoletos()">Apartar boletos</button>
-                        <button type="submit" id="btnConfirmar" class="btn btn-success w-100 py-2 fw-semibold rounded-pill d-none">Confirmar y Pagar</button>
                     </form>
                     <div id="alertaRespuesta" class="mt-3"></div>
                 </div>
@@ -130,13 +231,42 @@
         </div>
     </div>
 
+    <!-- Modal de Confirmación de Compra -->
+<div class="modal fade" id="modalTicket" tabindex="-1" aria-labelledby="modalTicketLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalTicketLabel">¡Compra Exitosa! </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="text-muted mb-1">Tu código de reserva es:</p>
+        <h3 id="codigoReservaTexto" class="fw-bold text-dark font-monospace bg-light p-2 rounded border"></h3>
+        
+        <hr class="my-3">
+        
+        <p class="mb-1 fw-bold">Asientos Adquiridos:</p>
+        <div id="asientosCompradosLista" class="d-flex justify-content-center flex-wrap gap-1 mb-3"></div>
+        
+        <div class="alert alert-info small mb-0">
+          Guarda este código para ingresar a la sala de cine
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
     <!-- Modal CRUD Película -->
     <div class="modal fade" id="modalPelicula" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-secondary bg-dark text-white">
+            <div class="modal-content border-secondary bg-dark text-black">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold text-white" id="modalCrudTitulo">Crear Película</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title fw-bold text-black" id="modalCrudTitulo">Crear Película</h5>
+                    <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="formCrudPelicula">
@@ -153,6 +283,12 @@
                             <label class="form-label text-light small">Precio por Boleto ($)</label>
                             <input type="number" step="0.50" class="form-control" id="inputPrecio" required>
                         </div>
+
+                        <div class="mb-3">
+                        <label class="form-label text-light small">Imagen de la Película (Cartel)</label>
+                        <input type="file" class="form-control" id="inputImagen" accept="image/*">
+                        <div class="form-text text-muted small">Selecciona una imagen en formato JPG, PNG o WEBP.</div>
+                    </div>
                         
                         <hr class="border-secondary">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -172,6 +308,28 @@
             </div>
         </div>
     </div>
+
+                <!-- Modal para Seleccionar Horario -->
+            <div class="modal fade" id="modalHorarios" tabindex="-1" aria-labelledby="modalHorariosLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content bg-dark text-white border-secondary">
+                        <div class="modal-header border-secondary">
+                            <h5 class="modal-title" id="modalHorariosLabel">Selecciona una función</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <h6 id="modalHorariosTituloPelicula" class="text-info fw-bold mb-3">Título de la película</h6>
+                            <p class="text-muted small">Elige el horario y sala de tu preferencia:</p>
+                            <!-- Aquí se inyectarán dinámicamente los botones de horarios -->
+                            <div id="listaHorariosModal" class="d-flex flex-column">
+                                <!-- Contenido dinámico -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+    
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
