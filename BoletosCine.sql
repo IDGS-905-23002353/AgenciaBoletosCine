@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS eventos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     titulo VARCHAR(100) NOT NULL,
     descripcion TEXT NOT NULL,
-    precio FLOAT NOT NULL
+    precio FLOAT NOT NULL,
+    imagen_base64 LONGTEXT NOT NULL -- Columna para almacenar la imagen en Base64
 );
 
 CREATE TABLE IF NOT EXISTS horarios (
@@ -32,13 +33,14 @@ CREATE TABLE IF NOT EXISTS apartados (
 );
 
 
-INSERT INTO eventos (titulo, descripcion, precio) VALUES 
-('Avatar: El camino del agua', 'Una aventura épica de ciencia ficción en Pandora.', 85.50),
-('Spider-Man: Across the Spider-Verse', 'Un viaje a través del multiverso con Miles Morales.', 75.00);
-
+INSERT INTO eventos (titulo, descripcion, precio, imagen_base64) VALUES 
+('Avatar: El camino del agua', 'Una aventura épica de ciencia ficción en Pandora.', 85.50, 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
+('Spider-Man: Across the Spider-Verse', 'Un viaje a través del multiverso con Miles Morales.', 75.00, 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
 
 INSERT INTO horarios (evento_id, fecha, hora, sala, capacidad_maxima, boletos_vendidos) VALUES 
 (1, '2026-09-25', '16:30 hrs', 'Sala 4 - VIP', 40, 5),
 (1, '2026-09-25', '20:00 hrs', 'Sala 2 - MacroXE', 60, 12),
 (2, '2026-09-26', '15:00 hrs', 'Sala 1 - Normal', 50, 0),
 (2, '2026-09-26', '18:30 hrs', 'Sala 3 - IMAX', 45, 45); 
+
+select * from eventos;
