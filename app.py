@@ -3,9 +3,14 @@ from flask_cors import CORS
 import mysql.connector
 import config
 import os
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 CORS(app)
+
+app.config['JWT_SECRET_KEY'] = 'tu_clave_secreta_super_segura' 
+jwt = JWTManager(app)
 
 def obtener_db_connection():
     return mysql.connector.connect(
@@ -14,6 +19,55 @@ def obtener_db_connection():
         password=config.DevelopmentConfig.SQLALCHEMY_DATABASE_URI.split("://")[1].split(":")[1].split("@")[0], # O puedes colocar directamente la contraseña
         database=os.getenv("DB_NAME", "cine")
     )
+
+@app.route('/api/registro', methods=['POST'])
+def registro():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    
+    hashed_pw = generate_password_hash(password)
+    
+    conexion = obtener_db_connection()
+    cursor = conexion.cursor()
+    try:
+        # Por defecto, todos los que se registran desde la web son 'cliente'
+        cursor.execute("INSERT INTO usuarios (username, password_hash, rol) VALUES (%s, %s, 'cliente')", (username, hashed_pw))
+        conexion.commit()
+        return jsonify({"msg": "Usuario registrado exitosamente"}), 201
+    except Exception as e:
+        return jsonify({"msg": "El nombre de usuario ya existe"}), 400
+    finally:
+        cursor.close()
+        conexion.close()
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password_input = data.get('password')
+    
+    conexion = obtener_db_connection()
+    cursor = conexion.cursor()
+    try:
+        # Ahora también traemos el 'rol' (user_data[3])
+        cursor.execute("SELECT id, username, password_hash, rol FROM usuarios WHERE username = %s", (username,))
+        user_data = cursor.fetchone()
+    finally:
+        cursor.close()
+        conexion.close()
+    
+    if user_data and check_password_hash(user_data[2], password_input):
+        # Guardamos el rol dentro del token
+        identity_data = {
+            'id': user_data[0], 
+            'username': user_data[1], 
+            'rol': user_data[3]
+        }
+        access_token = create_access_token(identity=identity_data)
+        return jsonify(access_token=access_token), 200
+    else:
+        return jsonify({"msg": "Usuario o contraseña incorrectos"}), 401
 
 #  Obtener y crear películas 
 @app.route('/api/eventos', methods=['GET', 'POST'])

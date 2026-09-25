@@ -3,6 +3,12 @@ DROP DATABASE IF EXISTS cine;
 CREATE DATABASE IF NOT EXISTS cine;
 USE cine;
 
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    rol VARCHAR(20) DEFAULT 'cliente'
+);
 
 CREATE TABLE IF NOT EXISTS eventos (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -44,3 +50,7 @@ INSERT INTO horarios (evento_id, fecha, hora, sala, capacidad_maxima, boletos_ve
 (2, '2026-09-26', '18:30 hrs', 'Sala 3 - IMAX', 45, 45); 
 
 select * from eventos;
+
+
+INSERT INTO usuarios (username, password_hash, rol) 
+VALUES ('admin', 'scrypt:32768:8:1$gaaMAe6trB7hIN20$1bce34c393f3ab51399ed2bad180f69f7ef98c2048c69f44b9c091cc05275f6355538a0ed4c9c3defbcf7f83d481671506eb07a457217d85fb4e5942ff4bc532', 'admin');

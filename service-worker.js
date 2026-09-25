@@ -1,12 +1,23 @@
-const CACHE_NAME = "cine-cache-v1";
-const RECURSOS = ["./", "./index.html", "./css/style.css", "./js/app.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+const CACHE_NAME = "cine-cache-v3"; // Cambiado a v3 para forzar actualización
+const RECURSOS = [
+    "./", 
+    "./index.html", 
+    "./login.html", // Estandarizado con ./
+    "./css/style.css", 
+    "./js/app.js", 
+    "./js/auth.js", 
+    "./manifest.webmanifest", 
+    "./icon-192.png", 
+    "./icon-512.png"
+];
 
 // Bootstrap, iconos y fuentes (vienen de otros servidores)
 const RECURSOS_CDN = [
     "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css",
     "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js",
     "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css",
-    "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+    "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap",
+    "https://cdn.jsdelivr.net/npm/sweetalert2@11"
 ];
 const ORIGENES_CDN = ["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"];
 
@@ -14,7 +25,7 @@ const esApi = (url) => url.includes("/api/");
 const esCdn = (url) => ORIGENES_CDN.some((origen) => url.includes(origen));
 
 self.addEventListener("install", (event) => {
-    console.log("SW: instalando");
+    console.log("SW: instalando v3");
     event.waitUntil(
         caches.open(CACHE_NAME).then(async (cache) => {
             const respuesta = await fetch("./");
@@ -37,7 +48,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-    console.log("SW: activado");
+    console.log("SW: activado v3");
     event.waitUntil(
         caches.keys().then((nombres) => {
             return Promise.all(
@@ -52,10 +63,17 @@ self.addEventListener("fetch", (event) => {
     // POST/PUT/DELETE (apartar, comprar, admin) nunca se cachean: siempre necesitan al servidor
     if (event.request.method !== "GET") return;
 
+    // Corrección para la navegación entre múltiples páginas (index y login)
     if (event.request.mode === "navigate") {
         event.respondWith(
             fetch(event.request).catch(async () => {
                 const cache = await caches.open(CACHE_NAME);
+                // 1. Intentar buscar la URL exacta (ej. login.html) en la caché
+                const enCache = await cache.match(event.request);
+                if (enCache) {
+                    return enCache;
+                }
+                // 2. Fallback al index si no existe
                 return cache.match("./");
             })
         );
@@ -63,8 +81,6 @@ self.addEventListener("fetch", (event) => {
     }
 
     // ---------- API del cine ----------
-    // Red primero (datos frescos), se clona la respuesta y se guarda.
-    // Si no hay internet, se responde con la copia guardada.
     if (esApi(event.request.url)) {
         event.respondWith(
             caches.open(CACHE_NAME).then(async (cache) => {
@@ -88,7 +104,6 @@ self.addEventListener("fetch", (event) => {
     }
 
     // ---------- CDN (Bootstrap, iconos, fuentes) ----------
-    // Cache primero (responde offline al instante) y se refresca en segundo plano
     if (esCdn(event.request.url)) {
         event.respondWith(
             caches.open(CACHE_NAME).then(async (cache) => {
@@ -96,7 +111,6 @@ self.addEventListener("fetch", (event) => {
 
                 const desdeRed = fetch(event.request)
                     .then((respuesta) => {
-                        // type opaque = recurso cross-origin sin CORS, tambien se guarda
                         if (respuesta && (respuesta.ok || respuesta.type === "opaque")) {
                             cache.put(event.request, respuesta.clone());
                         }
@@ -110,6 +124,7 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
+    // Estrategia general para el resto de archivos (imágenes, CSS, JS)
     event.respondWith(
         caches.match(event.request).then((respuesta) => {
             return respuesta || fetch(event.request);

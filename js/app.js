@@ -167,6 +167,7 @@
             if (temporizadorActivo) clearInterval(temporizadorActivo);
             mostrarPasoApartado(false);
             document.getElementById('alertaRespuesta').innerHTML = '';
+            generarMapaAsientos();
         };
 
         // Función para abrir el modal que lista los horarios disponibles de una película
@@ -310,22 +311,56 @@ function alternarSeleccionAsiento(idAsiento) {
     generarMapaAsientos(); 
 }
 
+// function actualizarResumenAsientos() {
+//     const contenedorLista = document.getElementById("listaAsientosSeleccionados");
+//     const contadorVisual = document.getElementById("contadorBoletosVisual");
+//     const inputCantidadOculto = document.getElementById("cantidadBoletos");
+
+//     if (contadorVisual) contadorVisual.innerText = asientosSeleccionados.length;
+//     if (inputCantidadOculto) inputCantidadOculto.value = asientosSeleccionados.length;
+
+//     if (contenedorLista) {
+//         if (asientosSeleccionados.length === 0) {
+//             contenedorLista.innerHTML = `<span class="text-muted italic small">Ningún asiento seleccionado</span>`;
+//         } else {
+//             contenedorLista.innerHTML = asientosSeleccionados
+//                 .map(asiento => `<span class="badge bg-danger text-white me-1">${asiento}</span>`)
+//                 .join(' ');
+//         }
+//     }
+// }
+
 function actualizarResumenAsientos() {
     const contenedorLista = document.getElementById("listaAsientosSeleccionados");
     const contadorVisual = document.getElementById("contadorBoletosVisual");
     const inputCantidadOculto = document.getElementById("cantidadBoletos");
+    const contenedorPrecios = document.getElementById("desglosePrecios"); // Contenedor de precios
 
-    if (contadorVisual) contadorVisual.innerText = asientosSeleccionados.length;
-    if (inputCantidadOculto) inputCantidadOculto.value = asientosSeleccionados.length;
+    const cantidad = asientosSeleccionados.length;
+
+    if (contadorVisual) contadorVisual.innerText = cantidad;
+    if (inputCantidadOculto) inputCantidadOculto.value = cantidad;
 
     if (contenedorLista) {
-        if (asientosSeleccionados.length === 0) {
+        if (cantidad === 0) {
             contenedorLista.innerHTML = `<span class="text-muted italic small">Ningún asiento seleccionado</span>`;
         } else {
             contenedorLista.innerHTML = asientosSeleccionados
                 .map(asiento => `<span class="badge bg-danger text-white me-1">${asiento}</span>`)
                 .join(' ');
         }
+    }
+
+    // Lógica dinámica para actualizar subtotal y total
+    if (contenedorPrecios) {
+        const totalCalculado = cantidad * precioSeleccionado;
+        const { subtotal, ivaTotal, total } = desglosarIVA(totalCalculado);
+
+        contenedorPrecios.innerHTML = `
+            <div class="text-muted">Subtotal: $${subtotal.toFixed(2)}</div>
+            <div class="text-muted">IVA (16%): $${ivaTotal.toFixed(2)}</div>
+            <div class="fw-bold text-dark mt-1 border-top pt-1">Total: $${total.toFixed(2)}</div>
+        `;
     }
 }
 
